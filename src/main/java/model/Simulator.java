@@ -16,19 +16,21 @@ public class Simulator {
 	
 	//modello del mondo
 	
-	List<Patient> patients;
-	 PriorityQueue<Patient> waitingRoom;
+	private List<Patient> patients;
+	private PriorityQueue<Patient> waitingRoom;
 	
 	private int freeStudios;//numero di studi liberi
-	 Patient.ColorCode ultimoColore;
+	
+	Patient.ColorCode ultimoColore;
 	
 	//Parametri di input
 	
 	private int totStudios =3;// NS
-	private int numPatients; //NP
+	private int numPatients=120; //NP
 	
 	private Duration T_ARRIVAL= Duration.ofMinutes(5);
-	private Duration DURATION_TRIAGE =Duration.ofMinutes(10);
+	
+	private Duration DURATION_TRIAGE =Duration.ofMinutes(5);
 	private Duration DURATION_WHITE=Duration.ofMinutes(10);
 	private Duration DURATION_YELLOW=Duration.ofMinutes(15);
 	private Duration DURATION_RED =Duration.ofMinutes(30);
@@ -58,8 +60,10 @@ public class Simulator {
 		this.patients = new ArrayList<>();
 		this.waitingRoom = new PriorityQueue<>();
 		this.freeStudios= this.totStudios;
+		
 	    ultimoColore = Patient.ColorCode.RED;
-		//inizializza i parametri di output
+		
+	    //inizializza i parametri di output
 		this.patientsAbandoned =0;
 		this.patientsDead=0;
 		this.patientsTreated=0;
@@ -68,8 +72,12 @@ public class Simulator {
 		LocalTime ora = this.StartTime;
 		int inseriti = 0;
 //		Patient.ColorCode colore = ColorCode.WHITE;
+		this.queue.add(new Event(ora,EventType.TICK,null));
+		
 		while (ora.isBefore(this.endTime)&&inseriti<this.numPatients) {
+			
 			Patient p= new Patient(inseriti ,ora,ColorCode.NEW);
+			
 			Event e = new Event(ora,EventType.ARRIVAL,p);
 			
 			this.queue.add(e);
@@ -91,6 +99,7 @@ public class Simulator {
 	}
 
 	private void processEvent(Event e) {
+		
 		Patient p = e.getPatient();
 		LocalTime ora = e.getTime();
 		
@@ -101,13 +110,18 @@ public class Simulator {
 			break;
 		case TRIAGE:
 			p.setColor(prossimoColore());
-			if(p.getColor().equals(Patient.ColorCode.WHITE))
+			if(p.getColor().equals(Patient.ColorCode.WHITE)) {
 				this.queue.add(new Event(ora.plus(TIMEOUT_WHITE),EventType.TIMEOUT,p));
-			
-			else if(p.getColor().equals(Patient.ColorCode.YELLOW))
+			this.waitingRoom.add(p);
+			}
+			else if(p.getColor().equals(Patient.ColorCode.YELLOW)) {
 				this.queue.add(new Event(ora.plus(TIMEOUT_YELLOW),EventType.TIMEOUT,p));
-			else if(p.getColor().equals(Patient.ColorCode.RED))
+				this.waitingRoom.add(p);
+			}else if(p.getColor().equals(Patient.ColorCode.RED)) {
 				this.queue.add(new Event(ora.plus(TIMEOUT_RED),EventType.TIMEOUT,p));
+			this.waitingRoom.add(p);
+		}
+			
 			break;
 		case FREE_STUDIO:
 			if(this.freeStudios==0)
@@ -122,7 +136,6 @@ public class Simulator {
 					this.queue.add(new Event(ora.plus(DURATION_YELLOW),EventType.TREATED,primo));
 				if(primo.getColor().equals(ColorCode.RED))
 					this.queue.add(new Event(ora.plus(DURATION_RED),EventType.TREATED,primo));
-				
 				primo.setColor(ColorCode.TREATING);
 				this.freeStudios--;
 						
@@ -166,7 +179,7 @@ public class Simulator {
 				this.queue.add(new Event(ora,EventType.FREE_STUDIO,null));	
 			}
 			if(ora.isBefore(this.endTime))
-				this.queue.add(new Event(ora,EventType.FREE_STUDIO,null));
+				this.queue.add(new Event(ora.plus(Duration.ofMinutes(5)),EventType.TICK,null));
 			break;
 			
 		}
